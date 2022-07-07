@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 
 from blog.documents import ArticleDocument, UserDocument, CategoryDocument
 from blog.serializers import ArticleSerializer, UserSerializer, CategorySerializer
-
+from rest_framework.response import Response
 
 class PaginatedElasticSearchAPIView(APIView, LimitOffsetPagination):
     serializer_class = None
@@ -75,3 +75,25 @@ class SearchArticles(PaginatedElasticSearchAPIView):
                     'type',
                     'content'
                 ], fuzziness='auto')
+
+
+class SearchArticlesV2(APIView):
+    serializer_class = ArticleSerializer
+    document_class = ArticleDocument
+
+    def get(self, request, format=None):
+        query = request.query_params.get('search', None)
+
+        q = Q(
+            'multi_match',
+            query=query,
+            fields=[
+                'title',
+                'author',
+                'type',
+                'content'
+            ], fuzziness='auto')
+        search = ArticleDocument.search().query(q)
+
+        serializer = ArticleSerializer(search, many=True)
+        return Response(serializer.data)
